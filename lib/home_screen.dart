@@ -1,49 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'login_screen.dart'; // For the logout function
 
-class HomeScreen extends StatefulWidget {
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreen extends StatelessWidget {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  late DatabaseReference userStatusRef;
-  String userStatus = "offline";
-
-  @override
-  void initState() {
-    super.initState();
-    _trackUserStatus();
-  }
-
-  // Function to track user's online/offline status
-  void _trackUserStatus() {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      String userId = user.uid;
-      userStatusRef = FirebaseDatabase.instance
-          .ref()  // Updated from .reference() to .ref()
-          .child('users')
-          .child(userId)
-          .child('status');
-
-      // Listening to the user status changes in Firebase Realtime Database
-      userStatusRef.onValue.listen((event) {
-        String status = (event.snapshot.value as String?) ?? "offline";  // Updated to safely cast value to String
-        setState(() {
-          userStatus = status;
-        });
-        print('User is $status');
-      });
-    }
-  }
 
   Future<void> _logout(BuildContext context) async {
     await _auth.signOut();
-    // Navigate the user back to the LoginScreen
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => LoginScreen()),
     );
@@ -52,32 +16,109 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () => _logout(context),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [const Color.fromARGB(255, 79, 130, 218), const Color.fromARGB(255, 53, 106, 150)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Welcome to the Home Page bro!',
-              style: TextStyle(fontSize: 24),
-            ),
-            SizedBox(height: 20),
-            Text(
-              "User status: $userStatus",
-              style: TextStyle(
-                fontSize: 18,
-                color: userStatus == "online" ? Colors.green : Colors.red,
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Section
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome to the Network!',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Find people near you with similar interests and make announcements.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              
+              // Announcements and Search Section
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          // Add your announcement function here
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.3), // Updated from primary
+                          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: Text(
+                          'Make an Announcement',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Add your search function here
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.3), // Updated from primary
+                          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: Text(
+                          'Find People Near Me',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Bottom Section with Logout Button
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: ElevatedButton(
+                  onPressed: () => _logout(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.8), // Updated from primary
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Logout',
+                    style: TextStyle(fontSize: 18, color: Colors.blue),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

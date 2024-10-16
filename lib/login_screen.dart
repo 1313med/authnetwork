@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart'; // Make sure to import the HomeScreen
-import 'presence_service.dart'; // Import the presence service file
+import 'package:shared_preferences/shared_preferences.dart';
+import 'home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -12,79 +13,49 @@ class _LoginScreenState extends State<LoginScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool rememberMe = false;
   String errorMessage = '';
-  bool isLoading = false; // Flag to indicate loading state
 
-  // Helper function to validate email format
-  bool isValidEmail(String email) {
-    final emailRegex = RegExp(r"^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
-    return emailRegex.hasMatch(email);
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _emailController.text = prefs.getString('email') ?? '';
+    _passwordController.text = prefs.getString('password') ?? '';
+    rememberMe = prefs.getBool('rememberMe') ?? false;
+    setState(() {});
   }
 
   Future<void> _login() async {
-    setState(() {
-      isLoading = true; // Start loading spinner
-    });
-
-    // Input validation
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       setState(() {
         errorMessage = 'Email and password cannot be empty.';
-        isLoading = false; // Stop loading spinner
-      });
-      return;
-    }
-
-    if (!isValidEmail(_emailController.text)) {
-      setState(() {
-        errorMessage = 'Please enter a valid email.';
-        isLoading = false; // Stop loading spinner
-      });
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      setState(() {
-        errorMessage = 'Password must be at least 6 characters long.';
-        isLoading = false; // Stop loading spinner
       });
       return;
     }
 
     try {
-      // Attempt to sign in the user
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-          email: _emailController.text, password: _passwordController.text);
-
-      // If login is successful, update presence
-      PresenceService().updateUserPresence(); // Set the user's online status
-
-      // Navigate to HomeScreen
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      if (rememberMe) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('email', _emailController.text);
+        prefs.setString('password', _passwordController.text);
+        prefs.setBool('rememberMe', rememberMe);
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
-        switch (e.code) {
-          case 'user-not-found':
-            errorMessage = 'No user found for that email.';
-            break;
-          case 'wrong-password':
-            errorMessage = 'Wrong password provided.';
-            break;
-          case 'network-request-failed':
-            errorMessage = 'No internet connection.';
-            break;
-          default:
-            errorMessage = 'Login failed: ${e.message}';
-        }
-        isLoading = false; // Stop loading spinner on error
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'An unknown error occurred: $e';
-        isLoading = false; // Stop loading spinner on error
+        errorMessage = 'Login failed: ${e.message}';
       });
     }
   }
@@ -92,37 +63,145 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            isLoading // Show spinner while loading
-                ? CircularProgressIndicator() // Loading indicator
-                : ElevatedButton(
-                    onPressed: _login,
-                    child: Text('Login'),
+      body: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E3C72), Color(0xFF2A5298)], // Blue gradient background
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Networking icon
+                Icon(
+                  Icons.people_alt_rounded, // Changed icon to a network-related one
+                  size: 100,
+                  color: Colors.white,
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Welcome Back!',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-            SizedBox(height: 20),
-            Text(
-              errorMessage,
-              style: TextStyle(
-                color: errorMessage == 'Login successful!' ? Colors.green : Colors.red,
-              ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'Please login to continue.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+                SizedBox(height: 30),
+                // Email input field
+                TextField(
+                  controller: _emailController,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Email or Username',
+                    labelStyle: TextStyle(color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.1),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    prefixIcon: Icon(Icons.email, color: Colors.white70),
+                  ),
+                ),
+                SizedBox(height: 20),
+                // Password input field
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    labelStyle: TextStyle(color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.1),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    prefixIcon: Icon(Icons.lock, color: Colors.white70),
+                  ),
+                ),
+                SizedBox(height: 10),
+                // Remember me and Register option
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              rememberMe = value!;
+                            });
+                          },
+                          activeColor: Colors.white,
+                          checkColor: Colors.blue,
+                        ),
+                        Text(
+                          'Remember Me',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => RegisterScreen()),
+                        );
+                      },
+                      child: Text(
+                        'Register Now',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                // Login button
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF4A61A8), // Use backgroundColor instead of primary
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Login',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                // Error message
+                if (errorMessage.isNotEmpty)
+                  Text(
+                    errorMessage,
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16,
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-} 
+}

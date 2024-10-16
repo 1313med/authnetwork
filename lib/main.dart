@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'login_screen.dart';
+import 'login_screen.dart'; // Import only one version of LoginScreen
+import 'home_screen.dart';  // Import HomeScreen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,30 +14,32 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: LoginScreen(),
+      home: AuthCheck(), // Check whether user is logged in or not
     );
   }
 }
 
-class PresenceService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
-
-  void updateUserPresence() {
-    // Set user presence as online/offline
-    User? user = _auth.currentUser;
-
-    if (user != null) {
-      final userStatusDatabaseRef = _databaseRef.child('users/${user.uid}/status');
-
-      // Set initial status to 'online' when connected
-      _databaseRef.child('.info/connected').onValue.listen((event) {
-        final connected = event.snapshot.value as bool? ?? false;
-        if (connected) {
-          userStatusDatabaseRef.set('online');
-          userStatusDatabaseRef.onDisconnect().set('offline');
+class AuthCheck extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.active) {
+          User? user = snapshot.data;
+          if (user == null) {
+            return LoginScreen(); // Go to Login if not authenticated
+          } else {
+            return HomeScreen();  // Go to HomeScreen if authenticated
+          }
         }
-      });
-    }
+        // Show a loading spinner while checking auth state
+        return Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+    );
   }
 }
