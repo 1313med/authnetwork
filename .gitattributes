@@ -1,0 +1,10 @@
+analysis_options.yaml android build hamada_pro.iml ios lib linux macos pubspec.lock pubspec.yaml README.md test web windows text=auto
+# Automatically normalize line endings
+* text=auto
+
+# Ensure specific file types have consistent line endings
+*.dart text
+*.json text
+*.yaml text
+*.md text
+*.sh text
